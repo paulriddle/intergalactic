@@ -2,7 +2,8 @@
 
 if not exist build mkdir build
 pushd build
-cl -nologo -Zi -FC ..\win32_platform.c -Fe:game /link user32.lib gdi32.lib
+REM Perhaps /link can be removed 
+cl -nologo -Zi -Wall -FC ..\win32_platform.c -Fe:game /link user32.lib gdi32.lib dwmapi.lib
 popd
 
 REM Compiler Flags:
@@ -19,7 +20,7 @@ REM GR- : Turn off C++ runtime type info
 REM Gm- : Turn off incremental build
 REM EHa-: Turn off exception handling
 REM WX  : Treat warnings as errors
-REM W4  : Set warning level to 4 (Wall to all levels)
+REM W4  : Set warning level to 4 (Or use Wall to all levels)
 REM wd  : Ignore warning
 REM Fe  : name of the executable
 REM fp:fast    : Ignores the rules in some cases to optimize fp operations

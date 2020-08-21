@@ -1,9 +1,34 @@
+#pragma warning(push, 0)
 #include <windows.h>
+#include <dwmapi.h>
+#pragma warning(pop)
+
+#include <stdint.h>
+#include <stdio.h>
+
+// Libraries: user32.lib, dwmapi.lib
+
+#define true 1
+#define false 0
 
 #define internal static
 #define global_variable static
 
-global_variable bool GlobalRunning;
+typedef int8_t s8;
+typedef uint8_t u8;
+
+typedef int16_t s16;
+typedef uint16_t u16;
+
+typedef int32_t s32;
+typedef uint32_t u32;
+
+typedef int64_t s64;
+typedef uint64_t u64;
+
+typedef int32_t bool32;
+
+global_variable bool32 IsRunning;
 
 internal LRESULT CALLBACK
 Win32WindowCallback(HWND Window,
@@ -11,6 +36,23 @@ Win32WindowCallback(HWND Window,
                     WPARAM WParam,
                     LPARAM LParam)
 {
+    LRESULT Result = 0;
+    
+    switch(Message)
+    {
+        case WM_DESTROY:
+        case WM_CLOSE:
+        {
+            IsRunning = false;
+        }break;
+        
+        default:
+        {
+            Result = DefWindowProcW(Window, Message, WParam, LParam);
+        }break;
+    }
+    
+    return Result;
 }
 
 int CALLBACK
@@ -19,51 +61,65 @@ WinMain(HINSTANCE Instance,
         LPSTR CommandLine,
         int ShowCode)
 {
-    WNDCLASSA WindowClass = {
+    UNREFERENCED_PARAMETER(PrevInstance);
+    UNREFERENCED_PARAMETER(CommandLine);
+    UNREFERENCED_PARAMETER(ShowCode);
+    
+    WNDCLASSW WindowClass = {
         .style = CS_HREDRAW|CS_VREDRAW,
         .lpfnWndProc = Win32WindowCallback,
-        .lpszClassName = "TowerDefenceWindowClass",
-        .hInstance = Instace
+        .lpszClassName = L"MainWindow",
+        .hInstance = Instance
     };
     
-    if(RegisterClassA(&WindowClass))
+    ATOM Atom = RegisterClassW(&WindowClass);
+    if(Atom == 0)
     {
-        HWND Window = CreateWindowExA(0,
-                                      WindowClass.lpszClassName,
-                                      "Tower Defence",
-                                      WS_VISIBLE|WS_OVERLAPPEDWINDOW,
-                                      CW_USEDEFAULT,
-                                      CW_USEDEFAULT,
-                                      1280,
-                                      720,
-                                      0,
-                                      0,
-                                      Instance,
-                                      0);
-        if(Window)
-        {
-            HDC DeviceContext = GetDC(Window);
-            
-            GlobalRunning = true;
-            
-            while(GlobalRunning)
-            {
-                MSG Message;
-                while(PeekMessageA(&Message, 0, 0, 0, PM_REMOVE))
-                {
-                    // TODO(paulriddle): Rewrite using modern Windows API
-                }
-            }
-        }
-        else
-        {
-            OutputDebugStringA("CreateWindowExA failed\n");
-            exit(1);
-        }
-    }
-    else
-    {
-        OutputDebugStringA("RegisterClassA failed\n");
+        fprintf(stderr, "RegisterClassW failed\n");
         exit(1);
     }
+    
+    HWND Window = CreateWindowExW(0,
+                                  L"MainWindow",
+                                  L"Tower Defence",
+                                  WS_VISIBLE|WS_OVERLAPPEDWINDOW,
+                                  CW_USEDEFAULT,
+                                  CW_USEDEFAULT,
+                                  CW_USEDEFAULT,
+                                  CW_USEDEFAULT,
+                                  0,
+                                  0,
+                                  Instance,
+                                  0);
+    if(Window == 0)
+    {
+        fprintf(stderr, "CreateWindowExW failed\n");
+        exit(1);
+    }
+    
+    // HDC DeviceContext = GetDC(Window);
+    IsRunning = true;
+    
+    while(IsRunning)
+    {
+        MSG Message;
+        
+        while(PeekMessageW(&Message, 0, 0, 0, PM_REMOVE))
+        {
+            if(Message.message == WM_QUIT)
+            {
+                IsRunning = false;
+            }
+            
+            TranslateMessage(&Message);
+            DispatchMessage(&Message);
+        }
+        
+        //
+        // NOTE(paulriddle): Frame rate limiter. Waits for vsync.
+        //
+        DwmFlush();
+    }
+    
+    return 0;
 }
