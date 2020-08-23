@@ -1,12 +1,10 @@
-#pragma warning(push, 0)
+#pragma warning(push, 3)
 #include <windows.h>
 #include <dwmapi.h>
 #pragma warning(pop)
 
 #include <stdint.h>
 #include <stdio.h>
-
-// Libraries: user32.lib, dwmapi.lib
 
 #define true 1
 #define false 0
@@ -65,14 +63,15 @@ WinMain(HINSTANCE Instance,
     UNREFERENCED_PARAMETER(CommandLine);
     UNREFERENCED_PARAMETER(ShowCode);
     
-    WNDCLASSW WindowClass = {
+    const WNDCLASSEXW WindowClass = {
+        .cbSize = sizeof(WNDCLASSEXW),
         .style = CS_HREDRAW|CS_VREDRAW,
         .lpfnWndProc = Win32WindowCallback,
         .lpszClassName = L"MainWindow",
         .hInstance = Instance
     };
     
-    ATOM Atom = RegisterClassW(&WindowClass);
+    ATOM Atom = RegisterClassExW(&WindowClass);
     if(Atom == 0)
     {
         fprintf(stderr, "RegisterClassW failed\n");
