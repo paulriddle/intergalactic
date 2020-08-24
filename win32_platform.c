@@ -18,6 +18,7 @@
 
 typedef int8_t s8;
 typedef uint8_t u8;
+typedef uint8_t byte;
 
 typedef int16_t s16;
 typedef uint16_t u16;
@@ -30,7 +31,91 @@ typedef uint64_t u64;
 
 typedef int32_t bool32;
 
+#define BYTES_PER_PIXEL 4
+
+struct
+{
+    BITMAPINFO Info;
+    void *Memory;
+    s32 Width;
+    s32 Height;
+    s32 Pitch;
+} typedef win32_backbuffer;
+
+struct
+{
+    s32 Width;
+    s32 Height;
+} typedef win32_window_dimension;
+
 global_variable bool32 IsRunning;
+global_variable win32_backbuffer Backbuffer;
+
+win32_window_dimension Win32GetWindowDimension(HWND Window)
+{
+    win32_window_dimension Result;
+
+    RECT ClientRect;
+    GetClientRect(Window, &ClientRect);
+    Result.Width  = ClientRect.right - ClientRect.left;
+    Result.Height = ClientRect.bottom - ClientRect.top;
+
+    return Result;
+}
+
+internal void
+RenderDebugGradient(win32_backbuffer *Buffer, s32 BlueOffset, s32 GreenOffset)
+{
+    byte *Row = (byte *)Buffer->Memory;
+
+    for(s32 Y = 0; Y < Buffer->Height; ++Y)
+    {
+        u32 *Pixel = (u32 *)Row;
+
+        for(s32 X = 0; X < Buffer->Width; ++X)
+        {
+            byte Blue  = X + BlueOffset;
+            byte Green = Y + GreenOffset;
+            *Pixel++   = (Green << 8) | Blue;
+        }
+
+        Row += Buffer->Pitch;
+    }
+}
+
+internal void
+Win32ResizeDIBSection(win32_backbuffer *Buffer, s32 Width, s32 Height)
+{
+    if(Buffer->Memory)
+    {
+        VirtualFree(Buffer->Memory, 0, MEM_RELEASE);
+    }
+
+    Buffer->Width  = Width;
+    Buffer->Height = Height;
+
+    Buffer->Info.bmiHeader.biSize        = sizeof(Buffer->Info.bmiHeader);
+    Buffer->Info.bmiHeader.biWidth       = Width;
+    Buffer->Info.bmiHeader.biHeight      = -Height;
+    Buffer->Info.bmiHeader.biPlanes      = 1;
+    Buffer->Info.bmiHeader.biBitCount    = 32;
+    Buffer->Info.bmiHeader.biCompression = BI_RGB;
+
+    s32 BitmapMemorySize = (Width * Height) * BYTES_PER_PIXEL;
+    Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT,
+                                  PAGE_READWRITE);
+    Buffer->Pitch  = Width * BYTES_PER_PIXEL;
+}
+
+internal void Win32DisplayBufferInWindow(HDC DeviceContext,
+                                         s32 WindowWidth,
+                                         s32 WindowHeight,
+                                         win32_backbuffer *Buffer)
+{
+    StretchDIBits(DeviceContext, 0, 0, WindowWidth, WindowHeight, 0, 0,
+                  Buffer->Width, Buffer->Height, Buffer->Memory, &Buffer->Info,
+                  DIB_RGB_COLORS, SRCCOPY);
+}
 
 internal LRESULT CALLBACK Win32WindowCallback(HWND Window,
                                               UINT Message,
@@ -41,6 +126,17 @@ internal LRESULT CALLBACK Win32WindowCallback(HWND Window,
 
     switch(Message)
     {
+        case WM_PAINT:
+        {
+            PAINTSTRUCT Paint;
+            HDC DeviceContext                = BeginPaint(Window, &Paint);
+            win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+            Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
+                                       Dimension.Height, &Backbuffer);
+            EndPaint(Window, &Paint);
+        }
+        break;
+
         case WM_DESTROY:
         case WM_CLOSE:
         {
@@ -67,15 +163,16 @@ int CALLBACK WinMain(HINSTANCE Instance,
     UNREFERENCED_PARAMETER(CommandLine);
     UNREFERENCED_PARAMETER(ShowCode);
 
+    Win32ResizeDIBSection(&Backbuffer, 1280, 720);
+
     WNDCLASSEXW WindowClass   = {0};
     WindowClass.cbSize        = sizeof(WNDCLASSEXW);
-    WindowClass.style         = CS_HREDRAW | CS_VREDRAW;
+    WindowClass.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     WindowClass.lpfnWndProc   = Win32WindowCallback;
     WindowClass.lpszClassName = L"MainWindow";
     WindowClass.hInstance     = Instance;
 
-    ATOM Atom = RegisterClassEx(&WindowClass);
-    if(Atom == 0)
+    if(!RegisterClassEx(&WindowClass))
     {
         fprintf(stderr, "RegisterClassEx failed\n");
         exit(1);
@@ -85,14 +182,16 @@ int CALLBACK WinMain(HINSTANCE Instance,
                                  WS_VISIBLE | WS_OVERLAPPEDWINDOW,
                                  CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                                  CW_USEDEFAULT, 0, 0, Instance, 0);
-    if(Window == 0)
+    if(!Window)
     {
         fprintf(stderr, "CreateWindowEx failed\n");
         exit(1);
     }
 
-    // HDC DeviceContext = GetDC(Window);
-    IsRunning = true;
+    HDC DeviceContext = GetDC(Window);
+    s32 XOffset       = 0;
+    s32 YOffset       = 0;
+    IsRunning         = true;
 
     while(IsRunning)
     {
@@ -109,10 +208,12 @@ int CALLBACK WinMain(HINSTANCE Instance,
             DispatchMessage(&Message);
         }
 
-        //
-        // NOTE(paulriddle): Frame rate limiter. Waits for vsync.
-        //
-        DwmFlush();
+        RenderDebugGradient(&Backbuffer, XOffset, YOffset);
+        win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+        Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
+                                   Dimension.Height, &Backbuffer);
+        ++XOffset;
+        YOffset += 2;
     }
 
     return 0;
