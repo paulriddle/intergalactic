@@ -191,7 +191,7 @@ int CALLBACK WinMain(HINSTANCE Instance,
         exit(ExitCode);
     }
 
-    HWND Window = CreateWindowEx(0, L"MainWindow", L"Tower Defence",
+    HWND Window = CreateWindowEx(0, L"MainWindow", L"Intergalactic",
                                  WS_VISIBLE | WS_OVERLAPPEDWINDOW,
                                  CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
                                  CW_USEDEFAULT, 0, 0, Instance, 0);

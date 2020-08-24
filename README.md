@@ -1,3 +1,3 @@
-# Triple-A Tower Defence
+# Intergalactic
 
-A video game being written.
+A video game from scratch. For now platform layer is taken mostly from Handmade Hero.
