@@ -104,7 +104,14 @@ Win32ResizeDIBSection(win32_backbuffer *Buffer, s32 Width, s32 Height)
     s32 BitmapMemorySize = (Width * Height) * BYTES_PER_PIXEL;
     Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT,
                                   PAGE_READWRITE);
-    Buffer->Pitch  = Width * BYTES_PER_PIXEL;
+    if(!Buffer->Memory)
+    {
+        MessageBox(
+            0, L"VirtualAlloc failed to allocate memory for drawing surface",
+            L"Error", MB_ICONEXCLAMATION | MB_OK);
+        exit(1);
+    }
+    Buffer->Pitch = Width * BYTES_PER_PIXEL;
 }
 
 internal void Win32DisplayBufferInWindow(HDC DeviceContext,
