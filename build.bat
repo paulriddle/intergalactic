@@ -2,9 +2,12 @@
 
 if not exist build mkdir build
 pushd build
-REM Perhaps /link can be removed 
-cl -nologo -Zi -Wall -FC ..\win32_platform.c -Fe:game /link user32.lib gdi32.lib dwmapi.lib
+clang ..\win32_platform.c -Wall -Wextra -fdiagnostics-absolute-paths -fuse-ld=lld -g -o game.exe -luser32 -lgdi32 -ldwmapi
 popd
+
+REM Compiling with cl interface:
+REM Perhaps /link can be removed 
+REM clang-cl -nologo -Zi -Wall -FC ..\win32_platform.c -Fegame /link user32.lib gdi32.lib dwmapi.lib
 
 REM Compiler Flags:
 
