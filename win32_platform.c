@@ -1,3 +1,7 @@
+#ifndef UNICODE
+#define UNICODE
+#endif
+
 #pragma warning(push, 3)
 #include <windows.h>
 #include <dwmapi.h>
@@ -46,7 +50,7 @@ Win32WindowCallback(HWND Window,
         
         default:
         {
-            Result = DefWindowProcW(Window, Message, WParam, LParam);
+            Result = DefWindowProc(Window, Message, WParam, LParam);
         }break;
     }
     
@@ -71,28 +75,28 @@ WinMain(HINSTANCE Instance,
         .hInstance = Instance
     };
     
-    ATOM Atom = RegisterClassExW(&WindowClass);
+    ATOM Atom = RegisterClassEx(&WindowClass);
     if(Atom == 0)
     {
-        fprintf(stderr, "RegisterClassW failed\n");
+        fprintf(stderr, "RegisterClassEx failed\n");
         exit(1);
     }
     
-    HWND Window = CreateWindowExW(0,
-                                  L"MainWindow",
-                                  L"Tower Defence",
-                                  WS_VISIBLE|WS_OVERLAPPEDWINDOW,
-                                  CW_USEDEFAULT,
-                                  CW_USEDEFAULT,
-                                  CW_USEDEFAULT,
-                                  CW_USEDEFAULT,
-                                  0,
-                                  0,
-                                  Instance,
-                                  0);
+    HWND Window = CreateWindowEx(0,
+                                 L"MainWindow",
+                                 L"Tower Defence",
+                                 WS_VISIBLE|WS_OVERLAPPEDWINDOW,
+                                 CW_USEDEFAULT,
+                                 CW_USEDEFAULT,
+                                 CW_USEDEFAULT,
+                                 CW_USEDEFAULT,
+                                 0,
+                                 0,
+                                 Instance,
+                                 0);
     if(Window == 0)
     {
-        fprintf(stderr, "CreateWindowExW failed\n");
+        fprintf(stderr, "CreateWindowEx failed\n");
         exit(1);
     }
     
@@ -103,7 +107,7 @@ WinMain(HINSTANCE Instance,
     {
         MSG Message;
         
-        while(PeekMessageW(&Message, 0, 0, 0, PM_REMOVE))
+        while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
         {
             if(Message.message == WM_QUIT)
             {
