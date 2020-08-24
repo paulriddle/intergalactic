@@ -3,8 +3,8 @@
 #endif
 
 #pragma warning(push, 3)
+#include <Windows.h>
 #include <dwmapi.h>
-#include <windows.h>
 #pragma warning(pop)
 
 #include <stdint.h>
