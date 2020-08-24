@@ -170,6 +170,8 @@ int CALLBACK WinMain(HINSTANCE Instance,
     UNREFERENCED_PARAMETER(CommandLine);
     UNREFERENCED_PARAMETER(ShowCode);
 
+    int ExitCode = 0;
+
     Win32ResizeDIBSection(&Backbuffer, 1280, 720);
 
     WNDCLASSEXW WindowClass   = {0};
@@ -178,11 +180,15 @@ int CALLBACK WinMain(HINSTANCE Instance,
     WindowClass.lpfnWndProc   = Win32WindowCallback;
     WindowClass.lpszClassName = L"MainWindow";
     WindowClass.hInstance     = Instance;
+    WindowClass.hCursor       = LoadCursor(0, IDC_ARROW);
+    WindowClass.hbrBackground = CreateSolidBrush(RGB(255, 0, 255));
 
     if(!RegisterClassEx(&WindowClass))
     {
-        fprintf(stderr, "RegisterClassEx failed\n");
-        exit(1);
+        ExitCode = GetLastError();
+        MessageBox(0, L"RegisterClassEx failed\n", L"Error",
+                   MB_ICONEXCLAMATION | MB_OK);
+        exit(ExitCode);
     }
 
     HWND Window = CreateWindowEx(0, L"MainWindow", L"Tower Defence",
@@ -191,8 +197,10 @@ int CALLBACK WinMain(HINSTANCE Instance,
                                  CW_USEDEFAULT, 0, 0, Instance, 0);
     if(!Window)
     {
-        fprintf(stderr, "CreateWindowEx failed\n");
-        exit(1);
+        ExitCode = GetLastError();
+        MessageBox(0, L"CreateWindowEx failed\n", L"Error",
+                   MB_ICONEXCLAMATION | MB_OK);
+        exit(ExitCode);
     }
 
     HDC DeviceContext = GetDC(Window);
@@ -223,5 +231,5 @@ int CALLBACK WinMain(HINSTANCE Instance,
         YOffset += 2;
     }
 
-    return 0;
+    return ExitCode;
 }
