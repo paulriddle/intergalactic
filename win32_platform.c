@@ -7,6 +7,7 @@
 #include <dwmapi.h>
 #pragma warning(pop)
 
+#include <intrin.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -29,9 +30,13 @@ typedef uint32_t u32;
 typedef int64_t s64;
 typedef uint64_t u64;
 
+typedef float real32;
+typedef double real64;
+
 typedef int32_t bool32;
 
-#define BYTES_PER_PIXEL 4
+#define BYTES_PER_PIXEL                      4
+#define SHOW_PERFORMANCE_INFO_EVERY_N_FRAMES 128
 
 struct
 {
@@ -172,6 +177,10 @@ int CALLBACK WinMain(HINSTANCE Instance,
 
     int ExitCode = 0;
 
+    s64 PerfCountFrequency;
+    QueryPerformanceFrequency((LARGE_INTEGER *)&PerfCountFrequency);
+    real32 Frequency = (real32)PerfCountFrequency;
+
     Win32ResizeDIBSection(&Backbuffer, 1280, 720);
 
     WNDCLASSEXW WindowClass   = {0};
@@ -204,10 +213,23 @@ int CALLBACK WinMain(HINSTANCE Instance,
     }
 
     HDC DeviceContext = GetDC(Window);
-    s32 XOffset       = 0;
-    s32 YOffset       = 0;
-    IsRunning         = true;
+    if(!DeviceContext)
+    {
+        MessageBox(0, L"GetDC failed\n", L"Error", MB_ICONEXCLAMATION | MB_OK);
+        exit(1);
+    }
+    HFONT MonospaceFont = (HFONT)GetStockObject(ANSI_FIXED_FONT);
+    if(MonospaceFont)
+    {
+        SelectObject(DeviceContext, MonospaceFont);
+    }
+    s32 XOffset = 0;
+    s32 YOffset = 0;
+    IsRunning   = true;
 
+    s64 LastFrame;
+    QueryPerformanceCounter((LARGE_INTEGER *)&LastFrame);
+    u64 LastCycleCount = __rdtsc();
     while(IsRunning)
     {
         MSG Message;
@@ -229,6 +251,28 @@ int CALLBACK WinMain(HINSTANCE Instance,
                                    Dimension.Height, &Backbuffer);
         ++XOffset;
         YOffset += 2;
+
+        u64 CurrentCycleCount = __rdtsc();
+        s64 CurrentFrame;
+        QueryPerformanceCounter((LARGE_INTEGER *)&CurrentFrame);
+
+        u64 CyclesElapsed  = CurrentCycleCount - LastCycleCount;
+        s64 CounterElapsed = CurrentFrame - LastFrame;
+
+        real32 MegacyclesPerFrame = (real32)CyclesElapsed / (1000.0f * 1000.0f);
+        real32 MillisecondsPerFrame =
+            1000.0f * (real32)CounterElapsed / Frequency;
+        real32 FPS = Frequency / (real32)CounterElapsed;
+
+        wchar_t PerformanceInfo[256] = {0};
+        swprintf_s(PerformanceInfo, sizeof(PerformanceInfo) / sizeof(wchar_t),
+                   L"%.02f milliseconds/frame, %.02f FPS, %.02f "
+                   L"megacycles/frame\n",
+                   MillisecondsPerFrame, FPS, MegacyclesPerFrame);
+        TextOut(DeviceContext, 0, 0, PerformanceInfo, wcslen(PerformanceInfo));
+
+        LastFrame      = CurrentFrame;
+        LastCycleCount = CurrentCycleCount;
     }
 
     return ExitCode;

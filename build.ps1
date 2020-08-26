@@ -1,1 +1,1 @@
-clang win32_platform.c -Wall -Wextra -fdiagnostics-absolute-paths -fuse-ld=lld -g -o build/game.exe -luser32 -lgdi32 -ldwmapi
+clang win32_platform.c -Wall -Wextra -fdiagnostics-absolute-paths -fuse-ld=lld -g -o build/game.exe -luser32 -lgdi32 -ldwmapi -lkernel32
