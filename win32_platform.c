@@ -35,8 +35,7 @@ typedef double real64;
 
 typedef int32_t bool32;
 
-#define BYTES_PER_PIXEL                      4
-#define SHOW_PERFORMANCE_INFO_EVERY_N_FRAMES 128
+#define BYTES_PER_PIXEL 4
 
 struct
 {
@@ -53,8 +52,33 @@ struct
     s32 Height;
 } typedef win32_window_dimension;
 
+struct
+{
+    bool32 IsDown;
+    bool32 Changed;
+} typedef button;
+
+enum
+{
+    BUTTON_D,
+    BUTTON_COUNT,
+};
+
+struct
+{
+    button Buttons[BUTTON_COUNT];
+} typedef input;
+
+#define WasPressed(Button)                                                     \
+    (Input.Buttons[Button].IsDown && Input.Buttons[Button].Changed)
+#define WasReleased(Button)                                                    \
+    (!Input.Buttons[Button].IsDown && Input.Buttons[Button].Changed)
+#define IsDown(Button) (Input.Buttons[Button].IsDown)
+
 global_variable bool32 IsRunning;
+global_variable bool32 ShowPerformance;
 global_variable win32_backbuffer Backbuffer;
+global_variable input Input = {0};
 
 win32_window_dimension Win32GetWindowDimension(HWND Window)
 {
@@ -149,6 +173,37 @@ internal LRESULT CALLBACK Win32WindowCallback(HWND Window,
         }
         break;
 
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+        case WM_KEYDOWN:
+        case WM_KEYUP:
+        {
+            u32 VKCode = WParam;
+            /* bool32 WasDown = (LParam & (1 << 30)) != 0; */
+            bool32 IsDown = (LParam & (1 << 31)) == 0;
+
+#define ProcessButton(VirtualButton, Button)                                   \
+    if(VKCode == VirtualButton)                                                \
+    {                                                                          \
+        Input.Buttons[Button].Changed =                                        \
+            IsDown != Input.Buttons[Button].IsDown;                            \
+        Input.Buttons[Button].IsDown = IsDown;                                 \
+    }
+            ProcessButton('D', BUTTON_D);
+
+            if(WasPressed(BUTTON_D))
+            {
+                ShowPerformance = !ShowPerformance;
+            }
+
+            bool32 AltKeyWasDown = (LParam & (1 << 29));
+            if((VKCode == VK_F4) && AltKeyWasDown)
+            {
+                IsRunning = false;
+            }
+        }
+        break;
+
         case WM_DESTROY:
         case WM_CLOSE:
         {
@@ -225,13 +280,19 @@ int CALLBACK WinMain(HINSTANCE Instance,
     }
     s32 XOffset = 0;
     s32 YOffset = 0;
-    IsRunning   = true;
+
+    IsRunning = true;
 
     s64 LastFrame;
     QueryPerformanceCounter((LARGE_INTEGER *)&LastFrame);
     u64 LastCycleCount = __rdtsc();
     while(IsRunning)
     {
+        for(s32 Button = 0; Button < BUTTON_COUNT; Button++)
+        {
+            Input.Buttons[Button].Changed = false;
+        }
+
         MSG Message;
 
         while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
@@ -252,27 +313,33 @@ int CALLBACK WinMain(HINSTANCE Instance,
         ++XOffset;
         YOffset += 2;
 
-        u64 CurrentCycleCount = __rdtsc();
-        s64 CurrentFrame;
-        QueryPerformanceCounter((LARGE_INTEGER *)&CurrentFrame);
+        if(ShowPerformance)
+        {
+            u64 CurrentCycleCount = __rdtsc();
+            s64 CurrentFrame;
+            QueryPerformanceCounter((LARGE_INTEGER *)&CurrentFrame);
 
-        u64 CyclesElapsed  = CurrentCycleCount - LastCycleCount;
-        s64 CounterElapsed = CurrentFrame - LastFrame;
+            u64 CyclesElapsed  = CurrentCycleCount - LastCycleCount;
+            s64 CounterElapsed = CurrentFrame - LastFrame;
 
-        real32 MegacyclesPerFrame = (real32)CyclesElapsed / (1000.0f * 1000.0f);
-        real32 MillisecondsPerFrame =
-            1000.0f * (real32)CounterElapsed / Frequency;
-        real32 FPS = Frequency / (real32)CounterElapsed;
+            real32 MegacyclesPerFrame =
+                (real32)CyclesElapsed / (1000.0f * 1000.0f);
+            real32 MillisecondsPerFrame =
+                1000.0f * (real32)CounterElapsed / Frequency;
+            real32 FPS = Frequency / (real32)CounterElapsed;
 
-        wchar_t PerformanceInfo[256] = {0};
-        swprintf_s(PerformanceInfo, sizeof(PerformanceInfo) / sizeof(wchar_t),
-                   L"%.02f milliseconds/frame, %.02f FPS, %.02f "
-                   L"megacycles/frame\n",
-                   MillisecondsPerFrame, FPS, MegacyclesPerFrame);
-        TextOut(DeviceContext, 0, 0, PerformanceInfo, wcslen(PerformanceInfo));
+            wchar_t PerformanceInfo[256] = {0};
+            swprintf_s(PerformanceInfo,
+                       sizeof(PerformanceInfo) / sizeof(wchar_t),
+                       L"%.02f milliseconds/frame, %.02f FPS, %.02f "
+                       L"megacycles/frame\n",
+                       MillisecondsPerFrame, FPS, MegacyclesPerFrame);
+            TextOut(DeviceContext, 0, 0, PerformanceInfo,
+                    wcslen(PerformanceInfo));
 
-        LastFrame      = CurrentFrame;
-        LastCycleCount = CurrentCycleCount;
+            LastFrame      = CurrentFrame;
+            LastCycleCount = CurrentCycleCount;
+        }
     }
 
     return ExitCode;
