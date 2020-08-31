@@ -14,7 +14,6 @@
 #define true 1
 #define false 0
 
-#define internal        static
 #define global_variable static
 
 typedef int8_t s8;
@@ -92,8 +91,9 @@ win32_window_dimension Win32GetWindowDimension(HWND Window)
     return Result;
 }
 
-internal void
-RenderDebugGradient(win32_backbuffer *Buffer, s32 BlueOffset, s32 GreenOffset)
+void RenderDebugGradient(win32_backbuffer *Buffer,
+                         s32 BlueOffset,
+                         s32 GreenOffset)
 {
     byte *Row = (byte *)Buffer->Memory;
 
@@ -112,8 +112,7 @@ RenderDebugGradient(win32_backbuffer *Buffer, s32 BlueOffset, s32 GreenOffset)
     }
 }
 
-internal void
-Win32ResizeDIBSection(win32_backbuffer *Buffer, s32 Width, s32 Height)
+void Win32ResizeDIBSection(win32_backbuffer *Buffer, s32 Width, s32 Height)
 {
     if(Buffer->Memory)
     {
@@ -143,20 +142,20 @@ Win32ResizeDIBSection(win32_backbuffer *Buffer, s32 Width, s32 Height)
     Buffer->Pitch = Width * BYTES_PER_PIXEL;
 }
 
-internal void Win32DisplayBufferInWindow(HDC DeviceContext,
-                                         s32 WindowWidth,
-                                         s32 WindowHeight,
-                                         win32_backbuffer *Buffer)
+void Win32DisplayBufferInWindow(HDC DeviceContext,
+                                s32 WindowWidth,
+                                s32 WindowHeight,
+                                win32_backbuffer *Buffer)
 {
     StretchDIBits(DeviceContext, 0, 0, WindowWidth, WindowHeight, 0, 0,
                   Buffer->Width, Buffer->Height, Buffer->Memory, &Buffer->Info,
                   DIB_RGB_COLORS, SRCCOPY);
 }
 
-internal LRESULT CALLBACK Win32WindowCallback(HWND Window,
-                                              UINT Message,
-                                              WPARAM WParam,
-                                              LPARAM LParam)
+LRESULT CALLBACK Win32WindowCallback(HWND Window,
+                                     UINT Message,
+                                     WPARAM WParam,
+                                     LPARAM LParam)
 {
     LRESULT Result = 0;
 
