@@ -1,3 +1,6 @@
+#include "generic_types.h"
+#include "intergalactic.c"
+
 #ifndef UNICODE
 #define UNICODE
 #endif
@@ -8,31 +11,7 @@
 #pragma warning(pop)
 
 #include <intrin.h>
-#include <stdint.h>
 #include <stdio.h>
-
-#define true 1
-#define false 0
-
-#define global_variable static
-
-typedef int8_t s8;
-typedef uint8_t u8;
-typedef uint8_t byte;
-
-typedef int16_t s16;
-typedef uint16_t u16;
-
-typedef int32_t s32;
-typedef uint32_t u32;
-
-typedef int64_t s64;
-typedef uint64_t u64;
-
-typedef float real32;
-typedef double real64;
-
-typedef int32_t bool32;
 
 #define BYTES_PER_PIXEL 4
 
@@ -89,27 +68,6 @@ win32_window_dimension Win32GetWindowDimension(HWND Window)
     Result.Height = ClientRect.bottom - ClientRect.top;
 
     return Result;
-}
-
-void RenderDebugGradient(win32_backbuffer *Buffer,
-                         s32 BlueOffset,
-                         s32 GreenOffset)
-{
-    byte *Row = (byte *)Buffer->Memory;
-
-    for(s32 Y = 0; Y < Buffer->Height; ++Y)
-    {
-        u32 *Pixel = (u32 *)Row;
-
-        for(s32 X = 0; X < Buffer->Width; ++X)
-        {
-            byte Blue  = X + BlueOffset;
-            byte Green = Y + GreenOffset;
-            *Pixel++   = (Green << 8) | Blue;
-        }
-
-        Row += Buffer->Pitch;
-    }
 }
 
 void Win32ResizeDIBSection(win32_backbuffer *Buffer, s32 Width, s32 Height)
@@ -305,7 +263,12 @@ int CALLBACK WinMain(HINSTANCE Instance,
             DispatchMessage(&Message);
         }
 
-        RenderDebugGradient(&Backbuffer, XOffset, YOffset);
+        game_backbuffer GameBackbuffer = {};
+        GameBackbuffer.Memory = Backbuffer.Memory;
+        GameBackbuffer.Width = Backbuffer.Width;
+        GameBackbuffer.Height = Backbuffer.Height;
+        GameBackbuffer.Pitch = Backbuffer.Pitch;
+        GameUpdateAndRender(&GameBackbuffer, XOffset, YOffset);
         win32_window_dimension Dimension = Win32GetWindowDimension(Window);
         Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
                                    Dimension.Height, &Backbuffer);
