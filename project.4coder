@@ -1,5 +1,5 @@
 version(1);
-project_name = "Triple-A Tower Defence";
+project_name = "Intergalactic";
 patterns = {
 	"*.c",
 	"*.h",
