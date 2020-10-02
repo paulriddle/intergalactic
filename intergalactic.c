@@ -1,4 +1,5 @@
 #include "intergalactic.h"
+#include <assert.h>
 
 void RenderDebugGradient(game_backbuffer *Buffer,
                          s32 BlueOffset,
@@ -21,9 +22,19 @@ void RenderDebugGradient(game_backbuffer *Buffer,
     }
 }
 
-void GameUpdateAndRender(game_backbuffer *Buffer,
-                         s32 BlueOffset,
-                         s32 GreenOffset)
+void GameUpdateAndRender(game_memory *Memory, game_backbuffer *Buffer)
 {
-    RenderDebugGradient(Buffer, BlueOffset, GreenOffset);
+    assert(sizeof(game_state) <= Memory->PermanentStorageSize);
+
+    game_state *GameState = (game_state *)Memory->PermanentStorage;
+    if(!Memory->IsInitialized)
+    {
+        GameState->GreenOffset = 0;
+        GameState->BlueOffset = 0;
+        Memory->IsInitialized = true;
+    }
+    ++GameState->GreenOffset;
+    GameState->BlueOffset += 2;
+
+    RenderDebugGradient(Buffer, GameState->BlueOffset, GameState->GreenOffset);
 }

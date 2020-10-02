@@ -12,23 +12,9 @@
 
 #include <intrin.h>
 #include <stdio.h>
+#include "win32_platform.h"
 
 #define BYTES_PER_PIXEL 4
-
-struct
-{
-    BITMAPINFO Info;
-    void *Memory;
-    s32 Width;
-    s32 Height;
-    s32 Pitch;
-} typedef win32_backbuffer;
-
-struct
-{
-    s32 Width;
-    s32 Height;
-} typedef win32_window_dimension;
 
 struct
 {
@@ -235,8 +221,28 @@ int CALLBACK WinMain(HINSTANCE Instance,
     {
         SelectObject(DeviceContext, MonospaceFont);
     }
-    s32 XOffset = 0;
-    s32 YOffset = 0;
+
+#if INTERNAL_BUILD
+    LPVOID BaseAddress = (LPVOID)Terabytes(1);
+#else
+    LPVOID BaseAddress = 0;
+#endif
+
+    game_memory GameMemory = {};
+    GameMemory.PermanentStorageSize = Megabytes(64);
+    GameMemory.TransientStorageSize = Gigabytes(2);
+    u64 TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
+    GameMemory.PermanentStorage = VirtualAlloc(BaseAddress, TotalSize,
+                                                   MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    if(!GameMemory.PermanentStorage)
+    {
+        ExitCode = GetLastError();
+        MessageBox(0, L"VirtualAlloc failed\n", L"Error",
+                       MB_ICONEXCLAMATION | MB_OK);
+        exit(ExitCode);
+    }
+    GameMemory.TransientStorage = (byte *)GameMemory.PermanentStorage +
+        GameMemory.PermanentStorageSize;
 
     IsRunning = true;
 
@@ -268,12 +274,10 @@ int CALLBACK WinMain(HINSTANCE Instance,
         GameBackbuffer.Width = Backbuffer.Width;
         GameBackbuffer.Height = Backbuffer.Height;
         GameBackbuffer.Pitch = Backbuffer.Pitch;
-        GameUpdateAndRender(&GameBackbuffer, XOffset, YOffset);
+        GameUpdateAndRender(&GameMemory, &GameBackbuffer);
         win32_window_dimension Dimension = Win32GetWindowDimension(Window);
         Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
                                    Dimension.Height, &Backbuffer);
-        ++XOffset;
-        YOffset += 2;
 
         if(ShowPerformance)
         {
